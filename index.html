@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover" />
+  <title>Reaction Grid</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- IMAGEM NO TOPO (opcional) -->
+  <div class="top-image">
+    <img src="assets/mach.jpg" alt="Reaction Grid" />
+  </div>
+
+  <header class="top">
+    <div class="controls">
+
+      <button id="startBtn" class="action-btn start-btn">INICIAR</button>
+      <button id="stopBtn" class="action-btn stop-btn" disabled>PARAR</button>
+    </div>
+
+
+      <div class="difficulty" aria-label="Dificuldade">
+        <button type="button" data-diff="easy" class="diff-btn active">EASY</button>
+        <button type="button" data-diff="medium" class="diff-btn">MEDIUM</button>
+        <button type="button" data-diff="hard" class="diff-btn">HARD</button>
+      </div>
+
+    <div class="stats">
+      <div class="hud">
+        <div class="hud-label">TIME</div>
+        <div class="hud-value"><span id="timeLeft">30.0</span><span class="hud-suffix">s</span></div>
+      </div>
+
+      <div class="hud">
+        <div class="hud-label">POINTS</div>
+        <div class="hud-value"><span id="score">0</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="grid" class="grid" aria-label="Malha 6x6"></div>
+    <p class="hint">Developed by Mach One Planalto.</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

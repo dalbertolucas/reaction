@@ -1,0 +1,200 @@
+@font-face {
+  font-family: "SpaceBdBT";
+  src: url("fonts/SpaceBT-Bold.otf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+:root{
+  --cell-size: 64px;
+  --gap: 10px;
+}
+
+*{ box-sizing: border-box; }
+
+/* trava total: sem rolagem */
+html, body{
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #fff;
+  color: #111;
+
+  display: flex;
+  flex-direction: column;
+  height: 100dvh; /* viewport dinâmica (Android certo) */
+}
+
+/* Imagem no topo */
+.top-image{
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0 6px;
+}
+.top-image img{
+  max-width: 100px;
+  width: 100%;
+  height: auto;
+  max-height: 80px; /* impede estourar verticalmente */
+}
+
+.top{
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #eee;
+}
+
+.controls{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Dificuldade arcade */
+.difficulty{
+  display: flex;
+  gap: 8px;
+}
+
+.diff-btn{
+  font-family: "SpaceBdBT", monospace;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.diff-btn.active{
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+.diff-btn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botões de ação arcade */
+.action-btn{
+  font-family: "SpaceBdBT", monospace;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.action-btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.start-btn{
+  background: #0a7a00;
+  border-color: #0a7a00;
+}
+
+.stop-btn{
+  background: #8b0000;
+  border-color: #8b0000;
+}
+
+/* HUD arcade */
+.stats{
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.hud{
+  font-family: "SpaceBdBT", monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.0;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+}
+
+.hud-label{
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.hud-value{
+  font-size: 34px;
+}
+
+.hud-suffix{
+  font-size: 18px;
+  margin-left: 6px;
+  opacity: 0.8;
+}
+
+.time-warning{
+  color: #e00000;
+}
+
+/* main ocupa o resto da tela */
+main{
+  flex: 1 1 auto;
+  min-height: 0; /* evita overflow fantasma */
+  padding: 12px;
+
+  display: grid;
+  place-items: center;
+  gap: 12px;
+}
+
+.grid{
+  display: grid;
+  grid-template-columns: repeat(6, var(--cell-size));
+  grid-template-rows: repeat(6, var(--cell-size));
+  gap: var(--gap);
+
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.cell{
+  width: var(--cell-size);
+  height: var(--cell-size);
+  background: #000;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.cell.active{
+  background: #e00000;
+}
+
+.hint{
+  margin: 0;
+  opacity: .75;
+}
