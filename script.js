@@ -2,9 +2,9 @@ const GRID_SIZE = 6;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
 
 const settings = {
-  easy:   { litCount: 1, litMs: 1600 },
-  medium: { litCount: 2, litMs: 1300 },
-  hard:   { litCount: 2, litMs: 900 },
+  easy:   { litCount: 1, litMs: 1000 },
+  medium: { litCount: 2, litMs: 750 },
+  hard:   { litCount: 2, litMs: 450 },
 };
 
 const gridEl = document.getElementById("grid");
@@ -199,4 +199,5 @@ document.querySelectorAll(".diff-btn").forEach(btn => {
 });
 
 buildGrid();
+
 
