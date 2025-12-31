@@ -13,36 +13,105 @@
     <img src="assets/mach.jpg" alt="Reaction Grid" />
   </div>
 
-  <header class="top">
-    <div class="controls">
-      <div class="difficulty" aria-label="Dificuldade">
-        <button type="button" data-diff="easy" class="diff-btn active">EASY</button>
-        <button type="button" data-diff="medium" class="diff-btn">MEDIUM</button>
-        <button type="button" data-diff="hard" class="diff-btn">HARD</button>
-    </div>
+  <!-- TELA INICIAL -->
+  <section id="startScreen" class="screen">
+    <div class="panel">
+      <div class="panel-top">
+        <h1 class="title" data-i18n="title">Reaction Grid</h1>
 
-    
-    <button id="startBtn" class="action-btn start-btn">START</button>
-    <button id="stopBtn" class="action-btn stop-btn" disabled>STOP</button>
-  </div>
-
-    <div class="stats">
-      <div class="hud">
-        <div class="hud-label">TIME</div>
-        <div class="hud-value"><span id="timeLeft">30.0</span><span class="hud-suffix">s</span></div>
+        <div class="lang-toggle" aria-label="Language">
+          <button type="button" class="lang-btn active" data-lang="pt">PT</button>
+          <button type="button" class="lang-btn" data-lang="en">EN</button>
+        </div>
       </div>
 
-      <div class="hud">
-        <div class="hud-label">POINTS</div>
-        <div class="hud-value"><span id="score">0</span></div>
-      </div>
-    </div>
-  </header>
+      <p class="desc" data-i18n="start_desc">
+        Clique (ou toque) apenas nos quadrados vermelhos antes que apaguem.
+        Cada acerto vale pontos. Errar tira pontos. O objetivo é fazer o máximo em 30 segundos.
+      </p>
 
-  <main>
-    <div id="grid" class="grid" aria-label="Malha 6x6"></div>
-    <p class="hint">Developed by Mach One Planalto.</p>
-  </main>
+      <div class="form">
+        <div class="field">
+          <div class="label" data-i18n="grid_size_label">TAMANHO DO GRID</div>
+          <div class="size-row">
+            <input id="gridSize" type="range" min="2" max="6" step="1" value="6" />
+            <div class="size-pill"><span id="gridSizeLabel">6</span>x<span id="gridSizeLabel2">6</span></div>
+          </div>
+          <div id="bestOnMenu" class="micro">Recorde atual: —</div>
+        </div>
+
+        <div class="field">
+          <div class="label" data-i18n="difficulty_label">DIFICULDADE</div>
+          <div class="difficulty" aria-label="Dificuldade">
+            <button type="button" data-diff="easy" class="diff-btn active" data-i18n="diff_easy">FÁCIL</button>
+            <button type="button" data-diff="medium" class="diff-btn" data-i18n="diff_medium">MÉDIO</button>
+            <button type="button" data-diff="hard" class="diff-btn" data-i18n="diff_hard">DIFÍCIL</button>
+          </div>
+
+        </div>
+
+        <div class="actions">
+          <button id="startFromScreenBtn" class="action-btn start-btn" data-i18n="start_btn">START</button>
+        </div>
+      </div>
+
+      <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
+    </div>
+  </section>
+
+  <!-- JOGO (apenas STOP e MENU) -->
+  <section id="gameScreen" class="game hidden">
+    <header class="top">
+      <div class="controls">
+        <button id="stopBtn" class="action-btn stop-btn" disabled data-i18n="stop_btn">STOP</button>
+        <button id="backBtn" class="action-btn ghost-btn" data-i18n="menu_btn">MENU</button>
+      </div>
+
+      <div class="stats">
+        <div class="hud">
+          <div class="hud-label" data-i18n="time_label">TIME</div>
+          <div class="hud-value"><span id="timeLeft">30.0</span><span class="hud-suffix">s</span></div>
+        </div>
+
+        <div class="hud">
+          <div class="hud-label" data-i18n="points_label">POINTS</div>
+          <div class="hud-value"><span id="score">0</span></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="grid" class="grid" aria-label="Grid"></div>
+      <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
+    </main>
+  </section>
+
+  <!-- TELA FINAL -->
+  <section id="endScreen" class="screen hidden">
+    <div class="panel">
+      <h1 class="title" data-i18n="game_over">Fim de jogo</h1>
+
+      <div class="end-stats">
+        <div class="end-box">
+          <div class="label" data-i18n="your_score">SUA PONTUAÇÃO</div>
+          <div class="big" id="finalScore">0</div>
+        </div>
+
+        <div class="end-box">
+          <div class="label" data-i18n="local_best">RECORDE (LOCAL)</div>
+          <div class="big" id="bestScore">0</div>
+          <div class="micro" id="bestMeta">—</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="playAgainBtn" class="action-btn start-btn" data-i18n="play_again">JOGAR DE NOVO</button>
+        <button id="menuFromEndBtn" class="action-btn ghost-btn" data-i18n="menu_btn">MENU</button>
+      </div>
+
+      <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
+    </div>
+  </section>
 
   <script src="script.js"></script>
 </body>
