@@ -200,8 +200,10 @@ main{
 }
 
 .hint{
-  margin: 0;
+  margin: 12px 0 0;
   opacity: .75;
+  text-align: center;
+  width: 100%;
 }
 
 /* ====== Screens (Start / End) ====== */
@@ -344,3 +346,4 @@ main{
   color: #fff;
   border-color: #000;
 }
+
