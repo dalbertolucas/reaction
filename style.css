@@ -26,7 +26,8 @@ body{
 
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: 100dvh;
+  padding: 4dvh 0;
 }
 
 /* Imagem no topo */
@@ -215,11 +216,9 @@ main{
 }
 
 .panel{
-  width: min(520px, 100%);
-  border: 1px solid #eee;
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+  width: min(560px, 95%);
+  max-height: 95dvh;
+  overflow-y: auto;
 }
 
 .panel-top{
@@ -346,4 +345,5 @@ main{
   color: #fff;
   border-color: #000;
 }
+
 
