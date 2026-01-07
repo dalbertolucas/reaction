@@ -21,7 +21,7 @@ const i18n = {
     diff_medium: "MÉDIO",
     diff_hard: "DIFÍCIL",
     difficulty_label: "DIFICULDADE",
-    start_btn: "INÍCIO",
+    start_btn: "INICIAR",
     stop_btn: "PARAR",
     menu_btn: "MENU",
     time_label: "TEMPO",
@@ -204,7 +204,6 @@ function setRunningUI(isRunning){
   stopBtn.disabled = !isRunning;
   backBtn.disabled = isRunning;
 
-  // trava a dificuldade durante a partida (fica só no menu)
   document.querySelectorAll(".diff-btn").forEach(b => {
     b.disabled = isRunning;
   });
@@ -285,8 +284,9 @@ function updateTimer(){
   const left = GAME_TIME - elapsed;
 
   const shown = left > 0 ? left : 0;
-  timeLeftEl.textContent = shown.toFixed(1);
 
+  // Mostra tempo e deixa vermelho nos 5s finais
+  timeLeftEl.textContent = shown.toFixed(1);
   timeLeftEl.classList.toggle("time-warning", left <= 5);
 
   if(left <= 0){
@@ -319,6 +319,7 @@ function startGame(){
   setRunningUI(true);
 
   gameStart = performance.now();
+
   timeLeftEl.textContent = `${GAME_TIME.toFixed(1)}`;
   timeLeftEl.classList.remove("time-warning");
 

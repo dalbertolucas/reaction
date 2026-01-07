@@ -155,12 +155,6 @@ body{
   font-size: 34px;
 }
 
-.hud-suffix{
-  font-size: 18px;
-  margin-left: 6px;
-  opacity: 0.8;
-}
-
 .time-warning{
   color: #e00000;
 }
@@ -212,15 +206,18 @@ main{
   flex: 1 1 auto;
   display: grid;
   place-items: center;
-  padding: 12px;
+  padding: 8px;
 }
 
 .panel{
-  width: min(560px, 95%);
+  width: min(480px, 50%);
   max-height: 95dvh;
   overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
 }
-
 .panel-top{
   display: flex;
   align-items: center;
@@ -240,7 +237,6 @@ main{
   line-height: 1.35;
   white-space: pre-line;
 }
-
 
 .form{
   display: grid;
@@ -346,4 +342,15 @@ main{
   border-color: #000;
 }
 
+/* ===== Modo jogo em 85% ===== */
+#gameScreen{
+  display: grid;
+  place-items: start center;
+  overflow: hidden;
+}
 
+#gameScreen .game-stage{
+  width: 100%;
+  transform: scale(0.85);
+  transform-origin: top center;
+}
