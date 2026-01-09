@@ -6,9 +6,14 @@
 }
 
 :root{
+  --menu-scale: 1;
+  --end-scale: 1;
+  --game-scale: 0.85;
+
   --cell-size: 64px;
   --gap: 10px;
 }
+
 
 *{ box-sizing: border-box; }
 
@@ -201,6 +206,23 @@ main{
   width: 100%;
 }
 
+/* Wrappers de escala (menu e fim) */
+.menu-stage{
+  width: 100%;
+  display: grid;
+  place-items: center;
+  transform: scale(var(--menu-scale));
+  transform-origin: top center;
+}
+
+.end-stage{
+  width: 100%;
+  display: grid;
+  place-items: center;
+  transform: scale(var(--end-scale));
+  transform-origin: top center;
+}
+
 /* ====== Screens (Start / End) ====== */
 .screen{
   flex: 1 1 auto;
@@ -313,9 +335,10 @@ main{
 /* Game wrapper */
 .game{
   flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
   min-height: 0;
+  display: grid;
+  place-items: start center;
+  overflow: hidden;
 }
 
 /* Language toggle */
@@ -342,15 +365,8 @@ main{
   border-color: #000;
 }
 
-/* ===== Modo jogo em 85% ===== */
-#gameScreen{
-  display: grid;
-  place-items: start center;
-  overflow: hidden;
-}
-
-#gameScreen .game-stage{
+.game-stage{
   width: 100%;
-  transform: scale(0.85);
+  transform: scale(var(--game-scale));
   transform-origin: top center;
 }

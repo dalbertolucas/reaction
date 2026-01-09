@@ -11,6 +11,10 @@ const settings = {
   hard:   { litCount: 2, litMs: 500 },
 };
 
+// Escalas (menu/fim e jogo). O jogo tem base 0.85, mas pode reduzir em telas menores (iPhone).
+let menuScale = 1;
+let gameScale = 0.85;
+
 const i18n = {
   pt: {
     title: "Reaction Grid",
@@ -82,6 +86,10 @@ const bestMetaEl = document.getElementById("bestMeta");
 const playAgainBtn = document.getElementById("playAgainBtn");
 const menuFromEndBtn = document.getElementById("menuFromEndBtn");
 
+// Elementos auxiliares para cálculo de layout
+const topImageEl = document.querySelector('.top-image');
+const gameTopBarEl = document.querySelector('#gameScreen .top');
+
 let cells = [];
 let score = 0;
 
@@ -98,6 +106,73 @@ let currentDifficulty = "easy";
 let currentLang = loadLang();
 
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+function getViewportSize(){
+  const vv = window.visualViewport;
+  return {
+    w: vv ? vv.width : window.innerWidth,
+    h: vv ? vv.height : window.innerHeight
+  };
+}
+
+function setCssVar(name, value){
+  document.documentElement.style.setProperty(name, String(value));
+}
+
+/**
+ * Ajusta escala do menu/fim e do jogo de forma adaptativa.
+ * - Menu/Fim: 1.0 sempre que possível, reduz em telas pequenas (iPhone/SE).
+ * - Jogo: base 0.85, mas também reduz se necessário para evitar corte.
+ */
+function applyResponsiveUIScaling(){
+  const { w, h } = getViewportSize();
+
+  // Base aproximada do painel (menu/fim). Reduz apenas quando faltar espaço.
+  const ms = Math.min(1, w / 520, h / 880);
+  menuScale = clamp(ms, 0.82, 1);
+
+  // Jogo: nunca passa de 0.85; acompanha a redução quando a tela apertar.
+  const gs = Math.min(0.85, menuScale * 0.92);
+  gameScale = clamp(gs, 0.70, 0.85);
+
+  setCssVar("--menu-scale", menuScale);
+  setCssVar("--end-scale", menuScale);
+  setCssVar("--game-scale", gameScale);
+}
+
+/**
+ * Ajusta --cell-size e --gap para o grid CABER na área disponível.
+ * Resolve corte no iPhone (Safari) em grids grandes (ex: 6x6).
+ */
+function applyResponsiveGridSizing(){
+  if(!gridEl) return;
+
+  const { w: viewportW, h: viewportH } = getViewportSize();
+
+  const topImageH = topImageEl ? topImageEl.getBoundingClientRect().height : 0;
+  const topBarH = gameTopBarEl ? gameTopBarEl.getBoundingClientRect().height : 0;
+
+  // Folgas/paddings aproximados
+  const paddingY = 12 * 2; // main padding (top+bottom)
+  const paddingX = 12 * 2;
+  const extraSlack = 18;
+
+  // A área do stage é escalada (gameScale). Convertendo para o tamanho "pré-escala":
+  const usableW = (viewportW - paddingX - extraSlack) / gameScale;
+  const usableH = (viewportH - topImageH - topBarH - paddingY - extraSlack) / gameScale;
+
+  // Gap adaptativo
+  const gap = clamp(Math.floor(Math.min(usableW, usableH) * 0.015), 6, 12);
+
+  const maxCellW = Math.floor((usableW - gap * (GRID_SIZE - 1)) / GRID_SIZE);
+  const maxCellH = Math.floor((usableH - gap * (GRID_SIZE - 1)) / GRID_SIZE);
+
+  // Limites para não ficar ridículo
+  const cell = clamp(Math.min(maxCellW, maxCellH), 34, 72);
+
+  setCssVar("--gap", `${gap}px`);
+  setCssVar("--cell-size", `${cell}px`);
+}
 
 function loadLang(){
   const raw = localStorage.getItem("rg_lang");
@@ -148,6 +223,8 @@ function updateMenuBestLabel(){
 }
 
 function showStartScreen(){
+  applyResponsiveUIScaling();
+
   gameScreen.classList.add("hidden");
   endScreen.classList.add("hidden");
   startScreen.classList.remove("hidden");
@@ -157,12 +234,18 @@ function showStartScreen(){
 }
 
 function showGameScreen(){
+  applyResponsiveUIScaling();
+  // Após renderizar, recalcula tamanhos para caber no viewport (iPhone)
+  requestAnimationFrame(() => applyResponsiveGridSizing());
+
   startScreen.classList.add("hidden");
   endScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
 }
 
 function showEndScreen(){
+  applyResponsiveUIScaling();
+
   startScreen.classList.add("hidden");
   gameScreen.classList.add("hidden");
   endScreen.classList.remove("hidden");
@@ -175,6 +258,7 @@ function applyGridSize(size){
   gridEl.style.setProperty("--grid-size", String(GRID_SIZE));
   buildGrid();
   updateMenuBestLabel();
+  applyResponsiveGridSizing();
 }
 
 function buildGrid(){
@@ -204,6 +288,7 @@ function setRunningUI(isRunning){
   stopBtn.disabled = !isRunning;
   backBtn.disabled = isRunning;
 
+  // trava a dificuldade durante a partida (fica só no menu)
   document.querySelectorAll(".diff-btn").forEach(b => {
     b.disabled = isRunning;
   });
@@ -284,9 +369,8 @@ function updateTimer(){
   const left = GAME_TIME - elapsed;
 
   const shown = left > 0 ? left : 0;
-
-  // Mostra tempo e deixa vermelho nos 5s finais
   timeLeftEl.textContent = shown.toFixed(1);
+
   timeLeftEl.classList.toggle("time-warning", left <= 5);
 
   if(left <= 0){
@@ -319,6 +403,8 @@ function startGame(){
   setRunningUI(true);
 
   gameStart = performance.now();
+  applyResponsiveUIScaling();
+  applyResponsiveGridSizing();
 
   timeLeftEl.textContent = `${GAME_TIME.toFixed(1)}`;
   timeLeftEl.classList.remove("time-warning");
@@ -424,8 +510,27 @@ function wireLanguageButtons(){
   setLang(currentLang);
 }
 
+// Recalcula layout quando o viewport muda (iPhone Safari muda bastante com barras/teclado)
+window.addEventListener("resize", () => {
+  applyResponsiveUIScaling();
+  applyResponsiveGridSizing();
+});
+
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", () => {
+    applyResponsiveUIScaling();
+    applyResponsiveGridSizing();
+  });
+  window.visualViewport.addEventListener("scroll", () => {
+    applyResponsiveUIScaling();
+    applyResponsiveGridSizing();
+  });
+}
+
 wireDifficultyButtons();
 wireGridSize();
 wireLanguageButtons();
 setRunningUI(false);
+applyResponsiveUIScaling();
+applyResponsiveGridSizing();
 showStartScreen();
