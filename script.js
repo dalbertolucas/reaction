@@ -1,109 +1,15 @@
-let GRID_SIZE = 6;
-let TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-
-// Tempo total do jogo
 const GAME_TIME = 30;
+const BEEPS_COUNT = 5;
+const POINTS_BEEP = 5;
+const PENALTY_EARLY = -2;
+const POINTS_FINAL = 12;
 
-// Quantidade e Tempo que leva para aparecer os quadrados vermelhos
-const settings = {
-  easy:   { litCount: 2, litMs: 900 },
-  medium: { litCount: 3, litMs: 750 },
-  hard:   { litCount: 2, litMs: 500 },
-};
-
-// Escalas (menu/fim e jogo). O jogo tem base 0.85, mas pode reduzir em telas menores (iPhone).
+/* ===== UI adaptativa =====
+   Menu/fim: escala 1.0 se couber, reduz se tela apertar
+   Jogo: base 0.75, mas reduz se a tela apertar
+*/
 let menuScale = 1;
-let gameScale = 0.85;
-
-const i18n = {
-  pt: {
-    title: "Reaction Grid",
-    start_desc:
-      "Clique (ou toque) somente nos quadrados vermelhos antes que desapareçam.\nCada acerto soma pontos. Errar tira pontos.\nVocê tem 30 segundos para marcar o maior número de pontos possível.",
-    grid_size_label: "TAMANHO DO GRID",
-    diff_easy: "FÁCIL",
-    diff_medium: "MÉDIO",
-    diff_hard: "DIFÍCIL",
-    difficulty_label: "DIFICULDADE",
-    start_btn: "INICIAR",
-    stop_btn: "PARAR",
-    menu_btn: "MENU",
-    time_label: "TEMPO",
-    points_label: "PONTOS",
-    developed_by: "Developed by Mach One Planalto.",
-    game_over: "Fim de jogo",
-    your_score: "SUA PONTUAÇÃO",
-    local_best: "RECORDE (LOCAL)",
-    play_again: "JOGAR DE NOVO",
-    best_on_menu: (v) => `Recorde atual: ${v === null ? "—" : v}`,
-    best_meta: (grid, diff, isNew) => `${grid}x${grid} • ${diff}${isNew ? " • NOVO RECORDE" : ""}`,
-  },
-  en: {
-    title: "Reaction Grid",
-    start_desc:
-      "Click (or tap) only the red squares before they disappear.\nEach correct hit earns points. Each mistake costs points.\nYou have 30 seconds to score as many points as possible.",
-    grid_size_label: "GRID SIZE",
-    difficulty_label: "DIFFICULTY",
-    start_btn: "START",
-    diff_easy: "EASY",
-    diff_medium: "MEDIUM",
-    diff_hard: "HARD",
-    stop_btn: "STOP",
-    menu_btn: "MENU",
-    time_label: "TIME",
-    points_label: "POINTS",
-    developed_by: "Developed by Mach One Planalto.",
-    game_over: "Game Over",
-    your_score: "YOUR SCORE",
-    local_best: "LOCAL BEST",
-    play_again: "PLAY AGAIN",
-    best_on_menu: (v) => `Current best: ${v === null ? "—" : v}`,
-    best_meta: (grid, diff, isNew) => `${grid}x${grid} • ${diff}${isNew ? " • NEW BEST" : ""}`,
-  }
-};
-
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const endScreen = document.getElementById("endScreen");
-
-const gridEl = document.getElementById("grid");
-
-const stopBtn = document.getElementById("stopBtn");
-const backBtn = document.getElementById("backBtn");
-
-const startFromScreenBtn = document.getElementById("startFromScreenBtn");
-const gridSizeInput = document.getElementById("gridSize");
-const gridSizeLabel = document.getElementById("gridSizeLabel");
-const gridSizeLabel2 = document.getElementById("gridSizeLabel2");
-const bestOnMenu = document.getElementById("bestOnMenu");
-
-const timeLeftEl = document.getElementById("timeLeft");
-const scoreEl = document.getElementById("score");
-
-const finalScoreEl = document.getElementById("finalScore");
-const bestScoreEl = document.getElementById("bestScore");
-const bestMetaEl = document.getElementById("bestMeta");
-const playAgainBtn = document.getElementById("playAgainBtn");
-const menuFromEndBtn = document.getElementById("menuFromEndBtn");
-
-// Elementos auxiliares para cálculo de layout
-const topImageEl = document.querySelector('.top-image');
-const gameTopBarEl = document.querySelector('#gameScreen .top');
-
-let cells = [];
-let score = 0;
-
-let running = false;
-let gameStart = 0;
-let rafId = null;
-
-let activeSet = new Set();
-let activeTimeouts = new Map();
-let spawnerTimeout = null;
-
-let currentDifficulty = "easy";
-
-let currentLang = loadLang();
+let gameScale = 0.75;
 
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 
@@ -119,81 +25,109 @@ function setCssVar(name, value){
   document.documentElement.style.setProperty(name, String(value));
 }
 
-/**
- * Ajusta escala do menu/fim e do jogo de forma adaptativa.
- * - Menu/Fim: 1.0 sempre que possível, reduz em telas pequenas (iPhone/SE).
- * - Jogo: base 0.85, mas também reduz se necessário para evitar corte.
- */
 function applyResponsiveUIScaling(){
   const { w, h } = getViewportSize();
 
-  // Base aproximada do painel (menu/fim). Reduz apenas quando faltar espaço.
-  const ms = Math.min(1, w / 520, h / 880);
+  // Base aproximada do painel (menu/fim)
+  const ms = Math.min(1, w / 560, h / 880);
   menuScale = clamp(ms, 0.82, 1);
 
-  // Jogo: nunca passa de 0.85; acompanha a redução quando a tela apertar.
-  const gs = Math.min(0.85, menuScale * 0.92);
-  gameScale = clamp(gs, 0.70, 0.85);
+  // Jogo: base 0.75, reduz quando necessário
+  // (mantém a cara do jogo, mas evita corte em iPhone/SE)
+  const gs = Math.min(0.75, menuScale * 0.92);
+  gameScale = clamp(gs, 0.62, 0.75);
 
   setCssVar("--menu-scale", menuScale);
   setCssVar("--end-scale", menuScale);
   setCssVar("--game-scale", gameScale);
 }
 
-/**
- * Ajusta --cell-size e --gap para o grid CABER na área disponível.
- * Resolve corte no iPhone (Safari) em grids grandes (ex: 6x6).
- */
-function applyResponsiveGridSizing(){
-  if(!gridEl) return;
+const i18n = {
+  pt: {
+    title: "Beep Reaction Duel",
+    start_desc:
+      "O jogo dura 30 segundos. Dentro desse tempo, tocarão 5 beeps em momentos aleatórios (cada partida muda).\nApós cada beep, quem tocar primeiro ganha 5 pontos. Se tocar antes do beep, perde 2 pontos.\nNo final dos 30 segundos, toca um último beep: o primeiro toque após ele vale 12 pontos.",
+    start_btn: "INICIAR",
+    stop_btn: "PARAR",
+    menu_btn: "MENU",
+    blue_label: "AZUL",
+    red_label: "VERMELHO",
+    tap_here: "TOQUE AQUI",
+    status_waiting: "Aguardando beep…",
+    status_go: "VALENDO!",
+    status_final: "ÚLTIMO BEEP!",
+    game_over: "Fim de jogo",
+    play_again: "JOGAR DE NOVO",
+    winner_blue: "VENCEDOR: AZUL 🟦",
+    winner_red: "VENCEDOR: VERMELHO 🟥",
+    winner_tie: "EMPATE",
+  },
+  en: {
+    title: "Beep Reaction Duel",
+    start_desc:
+      "The game lasts 30 seconds. During this time, 5 beeps will play at random moments (each match is different).\nAfter each beep, the first player to tap earns 5 points. If you tap before the beep, you lose 2 points.\nAt 30 seconds, a final beep plays: the first tap after it is worth 12 points.",
+    start_btn: "START",
+    stop_btn: "STOP",
+    menu_btn: "MENU",
+    blue_label: "BLUE",
+    red_label: "RED",
+    tap_here: "TAP HERE",
+    status_waiting: "Waiting for beep…",
+    status_go: "GO!",
+    status_final: "FINAL BEEP!",
+    game_over: "Game Over",
+    play_again: "PLAY AGAIN",
+    winner_blue: "WINNER: BLUE 🟦",
+    winner_red: "WINNER: RED 🟥",
+    winner_tie: "TIE",
+  }
+};
 
-  const { w: viewportW, h: viewportH } = getViewportSize();
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endScreen = document.getElementById("endScreen");
 
-  const topImageH = topImageEl ? topImageEl.getBoundingClientRect().height : 0;
-  const topBarH = gameTopBarEl ? gameTopBarEl.getBoundingClientRect().height : 0;
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const menuBtn = document.getElementById("menuBtn");
 
-  // Folgas/paddings aproximados
-  const paddingY = 12 * 2; // main padding (top+bottom)
-  const paddingX = 12 * 2;
-  const extraSlack = 18;
+const blueZone = document.getElementById("blueZone");
+const redZone = document.getElementById("redZone");
 
-  // A área do stage é escalada (gameScale). Convertendo para o tamanho "pré-escala":
-  const usableW = (viewportW - paddingX - extraSlack) / gameScale;
-  const usableH = (viewportH - topImageH - topBarH - paddingY - extraSlack) / gameScale;
+const scoreBlueEl = document.getElementById("scoreBlue");
+const scoreRedEl = document.getElementById("scoreRed");
 
-  // Gap adaptativo
-  const gap = clamp(Math.floor(Math.min(usableW, usableH) * 0.015), 6, 12);
+const statusText = document.getElementById("statusText");
 
-  const maxCellW = Math.floor((usableW - gap * (GRID_SIZE - 1)) / GRID_SIZE);
-  const maxCellH = Math.floor((usableH - gap * (GRID_SIZE - 1)) / GRID_SIZE);
+const finalBlueEl = document.getElementById("finalBlue");
+const finalRedEl = document.getElementById("finalRed");
 
-  // Limites para não ficar ridículo
-  const cell = clamp(Math.min(maxCellW, maxCellH), 34, 72);
+const winnerBanner = document.getElementById("winnerBanner");
+const winnerText = document.getElementById("winnerText");
 
-  setCssVar("--gap", `${gap}px`);
-  setCssVar("--cell-size", `${cell}px`);
-}
+const playAgainBtn = document.getElementById("playAgainBtn");
+const menuFromEndBtn = document.getElementById("menuFromEndBtn");
 
+let currentLang = loadLang();
 function loadLang(){
-  const raw = localStorage.getItem("rg_lang");
+  const raw = localStorage.getItem("brd_lang");
   return raw === "en" ? "en" : "pt";
 }
 
 function setLang(lang){
   currentLang = (lang === "en") ? "en" : "pt";
-  localStorage.setItem("rg_lang", currentLang);
+  localStorage.setItem("brd_lang", currentLang);
+  document.documentElement.lang = currentLang === "pt" ? "pt-br" : "en";
 
   document.querySelectorAll(".lang-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.lang === currentLang);
   });
 
-  document.documentElement.lang = currentLang === "pt" ? "pt-br" : "en";
-
-  renderI18nTexts();
-  updateMenuBestLabel();
+  renderI18n();
+  updateStatusWaiting();
 }
 
-function renderI18nTexts(){
+function renderI18n(){
   const dict = i18n[currentLang];
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.dataset.i18n;
@@ -202,335 +136,299 @@ function renderI18nTexts(){
   });
 }
 
-function bestKey(){
-  return `rg_best_${GRID_SIZE}x${GRID_SIZE}_${currentDifficulty}`;
+let running = false;
+let scoreBlue = 0;
+let scoreRed = 0;
+
+let scheduleTimeouts = [];
+let beepTimes = [];
+let armed = false;
+let claimed = false;
+let finalRound = false;
+
+let audioUnlocked = false;
+
+function setRunningUI(isRunning){
+  stopBtn.disabled = !isRunning;
+  menuBtn.disabled = isRunning;
 }
 
-function getBest(){
-  const raw = localStorage.getItem(bestKey());
-  const n = raw === null ? null : Number(raw);
-  return Number.isFinite(n) ? n : null;
-}
-
-function setBest(val){
-  localStorage.setItem(bestKey(), String(val));
-}
-
-function updateMenuBestLabel(){
-  const dict = i18n[currentLang];
-  const b = getBest();
-  bestOnMenu.textContent = dict.best_on_menu(b);
-}
-
-function showStartScreen(){
+function showStart(){
   applyResponsiveUIScaling();
-
   gameScreen.classList.add("hidden");
   endScreen.classList.add("hidden");
   startScreen.classList.remove("hidden");
-
-  document.querySelectorAll(".diff-btn").forEach(b => b.disabled = false);
-  updateMenuBestLabel();
 }
 
-function showGameScreen(){
+function showGame(){
   applyResponsiveUIScaling();
-  // Após renderizar, recalcula tamanhos para caber no viewport (iPhone)
-  requestAnimationFrame(() => applyResponsiveGridSizing());
-
   startScreen.classList.add("hidden");
   endScreen.classList.add("hidden");
   gameScreen.classList.remove("hidden");
 }
 
-function showEndScreen(){
+function showEnd(){
   applyResponsiveUIScaling();
-
   startScreen.classList.add("hidden");
   gameScreen.classList.add("hidden");
   endScreen.classList.remove("hidden");
 }
 
-function applyGridSize(size){
-  GRID_SIZE = size;
-  TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
-
-  gridEl.style.setProperty("--grid-size", String(GRID_SIZE));
-  buildGrid();
-  updateMenuBestLabel();
-  applyResponsiveGridSizing();
+function updateScoresUI(){
+  scoreBlueEl.textContent = String(scoreBlue);
+  scoreRedEl.textContent = String(scoreRed);
 }
 
-function buildGrid(){
-  gridEl.innerHTML = "";
-  cells = [];
+function flashZone(zoneEl){
+  zoneEl.classList.add("flash");
+  setTimeout(() => zoneEl.classList.remove("flash"), 120);
+}
 
-  activeSet.clear();
-  for(const t of activeTimeouts.values()) clearTimeout(t);
-  activeTimeouts.clear();
+function ensureAudioUnlocked(){
+  if(audioUnlocked) return;
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.0001;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.01);
+    audioUnlocked = true;
+    ctx.close?.();
+  } catch (_) {}
+}
 
-  for(let i=0;i<TOTAL_CELLS;i++){
-    const div = document.createElement("div");
-    div.className = "cell";
-    div.dataset.idx = String(i);
-    div.addEventListener("pointerdown", onCellClick);
-    gridEl.appendChild(div);
-    cells.push(div);
+function playBeep(freq = 880, durationMs = 120){
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if(!AudioCtx) return;
+
+  const ctx = new AudioCtx();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+
+  o.type = "square";
+  o.frequency.value = freq;
+
+  const now = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + (durationMs/1000));
+
+  o.connect(g);
+  g.connect(ctx.destination);
+
+  o.start(now);
+  o.stop(now + (durationMs/1000) + 0.02);
+
+  o.onended = () => ctx.close();
+}
+
+function generateRandomBeepTimes(){
+  const MIN_T = 2.0;
+  const MAX_T = 28.0;
+  const MIN_GAP = 2.0;
+
+  for(let attempt=0; attempt<200; attempt++){
+    const times = [];
+    while(times.length < BEEPS_COUNT){
+      const t = MIN_T + Math.random() * (MAX_T - MIN_T);
+      times.push(t);
+    }
+    times.sort((a,b)=>a-b);
+
+    let ok = true;
+    for(let i=1;i<times.length;i++){
+      if(times[i] - times[i-1] < MIN_GAP){ ok = false; break; }
+    }
+    if(ok) return times;
   }
+  return [5, 10, 15, 20, 25];
 }
 
-function setScore(delta){
-  score += delta;
-  scoreEl.textContent = String(score);
+function updateStatusWaiting(){
+  statusText.textContent = i18n[currentLang].status_waiting;
 }
 
-function setRunningUI(isRunning){
-  stopBtn.disabled = !isRunning;
-  backBtn.disabled = isRunning;
+function armRound(isFinal){
+  const dict = i18n[currentLang];
+  armed = true;
+  claimed = false;
+  finalRound = isFinal;
 
-  // trava a dificuldade durante a partida (fica só no menu)
-  document.querySelectorAll(".diff-btn").forEach(b => {
-    b.disabled = isRunning;
-  });
+  statusText.textContent = isFinal ? dict.status_final : dict.status_go;
+  playBeep(isFinal ? 1200 : 880, isFinal ? 160 : 120);
 }
 
-function activateCell(idx, litMs){
-  if(activeSet.has(idx)) return;
-
-  activeSet.add(idx);
-  cells[idx].classList.add("active");
-
-  const t = setTimeout(() => {
-    deactivateCell(idx);
-  }, litMs);
-
-  activeTimeouts.set(idx, t);
+function disarmRound(){
+  armed = false;
+  finalRound = false;
+  updateStatusWaiting();
 }
 
-function deactivateCell(idx){
-  if(!activeSet.has(idx)) return;
-
-  activeSet.delete(idx);
-  cells[idx].classList.remove("active");
-
-  const t = activeTimeouts.get(idx);
-  if(t) clearTimeout(t);
-  activeTimeouts.delete(idx);
+function awardBlue(points){
+  scoreBlue += points;
+  updateScoresUI();
+  flashZone(blueZone);
 }
 
-function pickRandomInactive(count){
-  const available = [];
-  for(let i=0;i<TOTAL_CELLS;i++){
-    if(!activeSet.has(i)) available.push(i);
-  }
-  if(available.length === 0) return [];
-
-  const chosen = [];
-  const target = clamp(count, 0, available.length);
-
-  for(let k=0;k<target;k++){
-    const r = Math.floor(Math.random() * available.length);
-    chosen.push(available[r]);
-    available.splice(r, 1);
-  }
-  return chosen;
+function awardRed(points){
+  scoreRed += points;
+  updateScoresUI();
+  flashZone(redZone);
 }
 
-function spawnWave(){
+function handleTap(player){
   if(!running) return;
 
-  const { litCount, litMs } = settings[currentDifficulty];
-
-  const picks = pickRandomInactive(litCount);
-  for(const idx of picks){
-    activateCell(idx, litMs);
+  if(!armed){
+    if(player === "blue") awardBlue(PENALTY_EARLY);
+    else awardRed(PENALTY_EARLY);
+    return;
   }
 
-  spawnerTimeout = setTimeout(spawnWave, litMs);
-}
+  if(claimed) return;
+  claimed = true;
 
-function onCellClick(e){
-  if(!running) return;
+  const points = finalRound ? POINTS_FINAL : POINTS_BEEP;
+  if(player === "blue") awardBlue(points);
+  else awardRed(points);
 
-  const idx = Number(e.currentTarget.dataset.idx);
-
-  if(activeSet.has(idx)){
-    deactivateCell(idx);
-    setScore(+5);
-  } else {
-    setScore(-2);
-  }
-}
-
-function updateTimer(){
-  if(!running) return;
-
-  const elapsed = (performance.now() - gameStart) / 1000;
-  const left = GAME_TIME - elapsed;
-
-  const shown = left > 0 ? left : 0;
-  timeLeftEl.textContent = shown.toFixed(1);
-
-  timeLeftEl.classList.toggle("time-warning", left <= 5);
-
-  if(left <= 0){
+  if(finalRound){
     finishGame();
     return;
   }
-  rafId = requestAnimationFrame(updateTimer);
+
+  disarmRound();
 }
 
-function resetRunState(){
-  for(const idx of Array.from(activeSet)) deactivateCell(idx);
-  for(const t of activeTimeouts.values()) clearTimeout(t);
-  activeTimeouts.clear();
-  activeSet.clear();
+function clearSchedule(){
+  for(const t of scheduleTimeouts) clearTimeout(t);
+  scheduleTimeouts = [];
+}
 
-  if(spawnerTimeout) clearTimeout(spawnerTimeout);
-  spawnerTimeout = null;
+function scheduleBeepAt(secondsFromStart, fn){
+  scheduleTimeouts.push(setTimeout(fn, Math.max(0, secondsFromStart * 1000)));
+}
 
-  if(rafId) cancelAnimationFrame(rafId);
-  rafId = null;
+function resetGameState(){
+  running = false;
+  armed = false;
+  claimed = false;
+  finalRound = false;
+
+  beepTimes = [];
+  clearSchedule();
+
+  scoreBlue = 0;
+  scoreRed = 0;
+  updateScoresUI();
+
+  updateStatusWaiting();
+
+  winnerText.textContent = "—";
+  winnerBanner.classList.remove("winner-blue", "winner-red", "winner-tie");
+  winnerBanner.classList.add("winner-tie");
 }
 
 function startGame(){
-  resetRunState();
+  resetGameState();
+  ensureAudioUnlocked();
 
-  score = 0;
-  scoreEl.textContent = "0";
-
+  showGame();
   running = true;
   setRunningUI(true);
 
-  gameStart = performance.now();
-  applyResponsiveUIScaling();
-  applyResponsiveGridSizing();
+  beepTimes = generateRandomBeepTimes();
 
-  timeLeftEl.textContent = `${GAME_TIME.toFixed(1)}`;
-  timeLeftEl.classList.remove("time-warning");
+  for(let i=0;i<beepTimes.length;i++){
+    scheduleBeepAt(beepTimes[i], () => {
+      if(!running) return;
+      armRound(false);
+    });
+  }
 
-  spawnWave();
-  rafId = requestAnimationFrame(updateTimer);
+  scheduleBeepAt(GAME_TIME, () => {
+    if(!running) return;
+    armRound(true);
+
+    scheduleBeepAt(GAME_TIME + 3, () => {
+      if(running && finalRound && !claimed){
+        finishGame();
+      }
+    });
+  });
 }
 
 function stopGame(){
   if(!running) return;
   running = false;
   setRunningUI(false);
-  resetRunState();
+  clearSchedule();
+  disarmRound();
 }
 
 function finishGame(){
-  if(!running) return;
-
   running = false;
   setRunningUI(false);
-  resetRunState();
+  clearSchedule();
 
-  const prev = getBest();
-  const isNew = prev === null || score > prev;
-  if(isNew) setBest(score);
-
-  const bestNow = getBest();
-
-  finalScoreEl.textContent = String(score);
-  bestScoreEl.textContent = String(bestNow ?? 0);
+  finalBlueEl.textContent = String(scoreBlue);
+  finalRedEl.textContent = String(scoreRed);
 
   const dict = i18n[currentLang];
-  bestMetaEl.textContent = dict.best_meta(GRID_SIZE, currentDifficulty.toUpperCase(), isNew);
 
-  showEndScreen();
+  winnerBanner.classList.remove("winner-blue", "winner-red", "winner-tie");
+  if(scoreBlue > scoreRed){
+    winnerText.textContent = dict.winner_blue;
+    winnerBanner.classList.add("winner-blue");
+  } else if(scoreRed > scoreBlue){
+    winnerText.textContent = dict.winner_red;
+    winnerBanner.classList.add("winner-red");
+  } else {
+    winnerText.textContent = dict.winner_tie;
+    winnerBanner.classList.add("winner-tie");
+  }
+
+  showEnd();
 }
 
-/* Botões do jogo */
+startBtn.addEventListener("click", startGame);
 stopBtn.addEventListener("click", stopGame);
-backBtn.addEventListener("click", () => {
+
+menuBtn.addEventListener("click", () => {
   if(running) return;
-  showStartScreen();
+  resetGameState();
+  showStart();
 });
 
-/* Botão START da tela inicial */
-startFromScreenBtn.addEventListener("click", () => {
-  showGameScreen();
-  startGame();
-});
-
-/* Tela final */
-playAgainBtn.addEventListener("click", () => {
-  showGameScreen();
-  startGame();
-});
+playAgainBtn.addEventListener("click", startGame);
 menuFromEndBtn.addEventListener("click", () => {
-  showStartScreen();
+  resetGameState();
+  showStart();
 });
 
-/* Dificuldade (só no menu) */
-function wireDifficultyButtons(){
-  document.querySelectorAll(".diff-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (running) return;
+blueZone.addEventListener("pointerdown", () => handleTap("blue"));
+redZone.addEventListener("pointerdown", () => handleTap("red"));
 
-      document.querySelectorAll(".diff-btn")
-        .forEach(b => b.classList.remove("active"));
-
-      btn.classList.add("active");
-      currentDifficulty = btn.dataset.diff;
-
-      updateMenuBestLabel();
-    });
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if(running) return;
+    setLang(btn.dataset.lang);
   });
-}
-
-/* Slider de tamanho do grid */
-function wireGridSize(){
-  const syncLabel = () => {
-    const v = Number(gridSizeInput.value);
-    gridSizeLabel.textContent = String(v);
-    gridSizeLabel2.textContent = String(v);
-  };
-
-  gridSizeInput.addEventListener("input", () => {
-    syncLabel();
-    applyGridSize(Number(gridSizeInput.value));
-  });
-
-  syncLabel();
-  applyGridSize(Number(gridSizeInput.value));
-}
-
-/* Idioma */
-function wireLanguageButtons(){
-  document.querySelectorAll(".lang-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if(running) return;
-      setLang(btn.dataset.lang);
-    });
-  });
-
-  setLang(currentLang);
-}
-
-// Recalcula layout quando o viewport muda (iPhone Safari muda bastante com barras/teclado)
-window.addEventListener("resize", () => {
-  applyResponsiveUIScaling();
-  applyResponsiveGridSizing();
 });
 
+/* iPhone Safari muda o viewport o tempo todo */
+window.addEventListener("resize", () => applyResponsiveUIScaling());
 if(window.visualViewport){
-  window.visualViewport.addEventListener("resize", () => {
-    applyResponsiveUIScaling();
-    applyResponsiveGridSizing();
-  });
-  window.visualViewport.addEventListener("scroll", () => {
-    applyResponsiveUIScaling();
-    applyResponsiveGridSizing();
-  });
+  window.visualViewport.addEventListener("resize", () => applyResponsiveUIScaling());
+  window.visualViewport.addEventListener("scroll", () => applyResponsiveUIScaling());
 }
 
-wireDifficultyButtons();
-wireGridSize();
-wireLanguageButtons();
-setRunningUI(false);
+resetGameState();
+setLang(currentLang);
 applyResponsiveUIScaling();
-applyResponsiveGridSizing();
-showStartScreen();
+showStart();
