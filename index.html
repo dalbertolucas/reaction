@@ -3,74 +3,90 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover" />
-  <title>Beep Reaction Duel</title>
+  <title>Reaction Grid</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <!-- IMAGEM NO TOPO (opcional) -->
   <div class="top-image">
-    <img src="assets/mach.jpg" alt="Mach One" />
+    <img src="assets/mach.jpg" alt="Reaction Grid" />
   </div>
 
   <!-- TELA INICIAL -->
   <section id="startScreen" class="screen">
     <div class="menu-stage">
-      <div class="panel">
-        <div class="panel-top">
-          <h1 class="title" data-i18n="title">Beep Reaction Duel</h1>
 
-          <div class="lang-toggle">
-            <button type="button" class="lang-btn active" data-lang="pt">PT</button>
-            <button type="button" class="lang-btn" data-lang="en">EN</button>
+    <div class="panel">
+      <div class="panel-top">
+        <h1 class="title" data-i18n="title">Reaction Grid</h1>
+
+        <div class="lang-toggle" aria-label="Language">
+          <button type="button" class="lang-btn active" data-lang="pt">PT</button>
+          <button type="button" class="lang-btn" data-lang="en">EN</button>
+        </div>
+      </div>
+
+      <p class="desc" data-i18n="start_desc">
+        Clique (ou toque) apenas nos quadrados vermelhos antes que apaguem.
+        Cada acerto vale pontos. Errar tira pontos. O objetivo é fazer o máximo em 30 segundos.
+      </p>
+
+      <div class="form">
+        <div class="field">
+          <div class="label" data-i18n="grid_size_label">TAMANHO DO GRID</div>
+          <div class="size-row">
+            <input id="gridSize" type="range" min="2" max="6" step="1" value="6" />
+            <div class="size-pill"><span id="gridSizeLabel">6</span>x<span id="gridSizeLabel2">6</span></div>
+          </div>
+          <div id="bestOnMenu" class="micro">Recorde atual: —</div>
+        </div>
+
+        <div class="field">
+          <div class="label" data-i18n="difficulty_label">DIFICULDADE</div>
+          <div class="difficulty" aria-label="Dificuldade">
+            <button type="button" data-diff="easy" class="diff-btn active" data-i18n="diff_easy">FÁCIL</button>
+            <button type="button" data-diff="medium" class="diff-btn" data-i18n="diff_medium">MÉDIO</button>
+            <button type="button" data-diff="hard" class="diff-btn" data-i18n="diff_hard">DIFÍCIL</button>
           </div>
         </div>
 
-        <p class="desc" data-i18n="start_desc"></p>
-
         <div class="actions">
-          <button id="startBtn" class="action-btn start-btn" data-i18n="start_btn">INICIAR</button>
+          <button id="startFromScreenBtn" class="action-btn start-btn" data-i18n="start_btn">INICIAR</button>
         </div>
-
-        <p class="hint">Developed by Mach One Planalto.</p>
       </div>
+
+      <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
+    </div>
     </div>
   </section>
 
-  <!-- TELA DO JOGO -->
+  <!-- JOGO (STOP e MENU) -->
   <section id="gameScreen" class="game hidden">
     <div class="game-stage">
       <header class="top">
         <div class="controls">
           <button id="stopBtn" class="action-btn stop-btn" disabled data-i18n="stop_btn">STOP</button>
-          <button id="menuBtn" class="action-btn ghost-btn" data-i18n="menu_btn">MENU</button>
+          <button id="backBtn" class="action-btn ghost-btn" data-i18n="menu_btn">MENU</button>
         </div>
 
         <div class="stats">
+          <!-- TEMPO -->
           <div class="hud">
-            <div class="hud-label" data-i18n="blue_label">BLUE</div>
-            <div class="hud-value"><span id="scoreBlue">0</span></div>
+            <div class="hud-label" data-i18n="time_label">TIME</div>
+            <div class="hud-value"><span id="timeLeft">30.0</span></div>
           </div>
 
           <div class="hud">
-            <div class="hud-label" data-i18n="red_label">RED</div>
-            <div class="hud-value"><span id="scoreRed">0</span></div>
+            <div class="hud-label" data-i18n="points_label">POINTS</div>
+            <div class="hud-value"><span id="score">0</span></div>
           </div>
         </div>
       </header>
 
-      <main class="arena">
-        <div id="blueZone" class="zone blue">
-          <div class="zone-label" data-i18n="tap_here">TOQUE AQUI</div>
-        </div>
-
-        <div id="redZone" class="zone red">
-          <div class="zone-label" data-i18n="tap_here">TOQUE AQUI</div>
-        </div>
-
-        <!-- status agora fica quase no topo -->
-        <div class="center-overlay">
-          <div id="statusText" class="status" data-i18n="status_waiting"></div>
-        </div>
+      <main>
+        <div id="grid" class="grid" aria-label="Grid"></div>
+        <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
       </main>
     </div>
   </section>
@@ -78,32 +94,30 @@
   <!-- TELA FINAL -->
   <section id="endScreen" class="screen hidden">
     <div class="end-stage">
-      <div class="panel">
-        <h1 class="title" data-i18n="game_over"></h1>
 
-        <div id="winnerBanner" class="winner-banner winner-tie">
-          <div id="winnerText" class="winner-text">—</div>
+    <div class="panel">
+      <h1 class="title" data-i18n="game_over">Fim de jogo</h1>
+
+      <div class="end-stats">
+        <div class="end-box">
+          <div class="label" data-i18n="your_score">SUA PONTUAÇÃO</div>
+          <div class="big" id="finalScore">0</div>
         </div>
 
-        <div class="end-stats">
-          <div class="end-box blue-box">
-            <div class="label" data-i18n="blue_label"></div>
-            <div class="big" id="finalBlue">0</div>
-          </div>
-
-          <div class="end-box red-box">
-            <div class="label" data-i18n="red_label"></div>
-            <div class="big" id="finalRed">0</div>
-          </div>
+        <div class="end-box">
+          <div class="label" data-i18n="local_best">RECORDE (LOCAL)</div>
+          <div class="big" id="bestScore">0</div>
+          <div class="micro" id="bestMeta">—</div>
         </div>
-
-        <div class="actions">
-          <button id="playAgainBtn" class="action-btn start-btn" data-i18n="play_again"></button>
-          <button id="menuFromEndBtn" class="action-btn ghost-btn" data-i18n="menu_btn"></button>
-        </div>
-
-        <p class="hint">Developed by Mach One Planalto.</p>
       </div>
+
+      <div class="actions">
+        <button id="playAgainBtn" class="action-btn start-btn" data-i18n="play_again">JOGAR DE NOVO</button>
+        <button id="menuFromEndBtn" class="action-btn ghost-btn" data-i18n="menu_btn">MENU</button>
+      </div>
+
+      <p class="hint" data-i18n="developed_by">Developed by Mach One Planalto.</p>
+    </div>
     </div>
   </section>
 
